@@ -14,27 +14,125 @@ editor: source
 
 ## Tuesday, August 29
 
-1. Pull in the [Palmer penguins dataset](https://allisonhorst.github.io/palmerpenguins/).
+1.  Pull in the [Palmer penguins dataset](https://allisonhorst.github.io/palmerpenguins/).
 
 ```{r}
-
+install.packages("tidyverse")
+install.packages("dplyr")
+install.packages("palmerpenguins")
+library(palmerpenguins)
+library(tidyverse)
+library(dplyr)
+data(package = 'palmerpenguins')
+head(penguins, n=100)
+print(penguins)
 ```
 
-2. Find the mean and standard deviation for the body mass of penguins (*body_mass_g*). Please use the `summarize()` function from `tidyverse`.
+2.  Find the mean and standard deviation for the body mass of penguins (*body_mass_g*). Please use the `summarize()` function from `tidyverse`.
 
 ```{r}
-
+penguins %>%
+summarize(mean=mean(body_mass_g, na.rm=TRUE),
+          std_dev=sd(body_mass_g, na.rm=TRUE))
 ```
 
-3. Find the mean and standard deviation for the body mass of penguins (*body_mass_g*), split by species of penguin (*species*). Please use the `group_by()` and `summarize()` functions from `tidyverse`.
+3.  Find the mean and standard deviation for the body mass of penguins (*body_mass_g*), split by species of penguin (*species*). Please use the `group_by()` and `summarize()` functions from `tidyverse`.
 
 ```{r}
-
+penguins %>%
+   group_by(species) %>% 
+summarize(mean=mean(body_mass_g, na.rm=TRUE),
+          std_dev=sd(body_mass_g, na.rm=TRUE))
 ```
 
-4. Construct 95% confidence intervals for the body mass of penguins (*body_mass_g*) for each species of penguin (*species*).
+4.  Construct 95% confidence intervals for the body mass of penguins (*body_mass_g*) for each species of penguin (*species*).
 
 ```{r}
+require(dplyr)
+alpha <- 0.05
+
+penguins %>% 
+    group_by(species) %>% 
+    summarize(lower = mean(body_mass_g, na.rm=TRUE) - qt(1- alpha/2, (n() - 1))*sd(body_mass_g, na.rm=TRUE)/sqrt(n()),
+              upper = mean(body_mass_g, na.rm=TRUE) + qt(1- alpha/2, (n() - 1))*sd(body_mass_g, na.rm=TRUE)/sqrt(n()))
+```
+
+95% CI for Adelie species' body mass (in grams) is (3627.2, 3774.2) 
+95% CI for Chinstrap species' body mass (in grams) is (3640.1, 3826.1) 
+95% CI for Gentoo species' body mass (in grams) is (4986.4, 5165.6) [(these are the chonky bois)]{style="color: #a632a8"}
+
+5.  Construct a scatterplot with body mass (*body_mass_g*) on the *y*-axis, flipper length (*flipper_length_mm*) on the *x*-axis, and the markers (dots) colored by species of penguin (*species*).
+
+```{r}
+penguins %>% 
+   ggplot(aes(x = flipper_length_mm, color=species)) +
+   geom_point(aes(y = body_mass_g)) +
+   labs(y= "body mass (g)", x= "flipper length (mm)")
+   theme_bw()
+```
+
+## Thursday, August 31
+
+6.  Model penguin body mass (*body_mass_g*) as a function of flipper length (*flipper_length_mm*) and bill length (*bill_length_mm*). Remember to state the resulting regression model.
+
+```{r}
+model1 <- glm(body_mass_g ~ flipper_length_mm + bill_length_mm, 
+          data = penguins,
+          family = "gaussian")
+ summary(model1)
+```
+Resulting regression model:
+y_hat = -5736.90 + 48.15x1 + 6.05x2
+where:
+y_hat = body mass (g)
+x1 = flipper length (mm)
+x2 = bill length (mm)
+
+7.  Create a table that has Estimate (95% CI) and *p*-Value as columns; every predictor in the regression model will have a row. See [Table 2 in this paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4742426/) for an example.
+
+```{r}
+summary(model1, level=0.95)
+```
+
+8.  Use the appropriate hypothesis test to determine if this is a significant regression line. Test at the $\alpha=0.05$ level. Remember to typeset your results.
+
+```{r}
+full <- glm(body_mass_g ~ flipper_length_mm + bill_length_mm, data = penguins, family = "gaussian")
+reduced <- glm(body_mass_g ~ 1, data = penguins, family = "gaussian")
+anova(reduced, full, test = "F")
+```
+For full model:
+Reject Ho. There is sufficient evidence to suggest that the slope is non-zero.
+
+9.  Use the appropriate hypothesis test(s) to determine which, if any, are significant predictors of penguin body mass. Test at the $\alpha=0.05$ level. Remember to typeset your results.
+
+```{r}
+summary(model1)
+```
+For flipper length:
+Reject Ho. There is sufficient evidence to suggest that flipper length significantly predicts body mass.
+
+For bill length:
+Fail to reject Ho. There is not sufficient evidence that bill length significantly predicts body mass.
+
+10. Create a data visualization for your regression model. Use the plot in question 5 as a starting point and overlay a regression line. (This means that only flipper length will vary and you will need to hold bill length constant.)
+
+```{r}
+coef <- coefficients(model1)
+penguins %>%
+summarize(mean=mean(bill_length_mm, na.rm=TRUE))
+          
+penguins <- penguins %>%
+  mutate(y_hat_flipper = coef["(Intercept)"] + coef["flipper_length_mm"]*flipper_length_mm + coef["bill_length_mm"]*44)
+
+penguins %>% 
+   ggplot(aes(x = flipper_length_mm, color=species)) +
+   geom_point(aes(y = body_mass_g)) +
+   geom_line(aes(y = y_hat_flipper), color = "black") +
+   geom_text(aes(x = 176, y = 2700, label = "bill length = avg"), color = "black", size = 4)
+   labs(y= "body mass (g)", x= "flipper length (mm)") +
+   theme_bw()
+```
 
 ```
 
